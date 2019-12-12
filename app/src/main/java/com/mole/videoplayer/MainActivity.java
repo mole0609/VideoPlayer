@@ -2,6 +2,7 @@ package com.mole.videoplayer;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.media.AudioManager;
@@ -36,8 +37,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private MediaPlayer mediaPlayer;
     private SurfaceHolder surfaceHolder;
     private int position;
-
+    private Context mContext;
     String path = Environment.getExternalStorageDirectory() + File.separator + "flutter.mp4";
+    private Uri uri;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,7 +51,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //        WindowManager.LayoutParams params = getWindow().getAttributes();
 //        params.systemUiVisibility = View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_IMMERSIVE;
 //        getWindow().setAttributes(params);
-
+        mContext = this;
         play = findViewById(R.id.play);
         pause = findViewById(R.id.pasue);
         stop = findViewById(R.id.stop);
@@ -74,11 +76,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         });
 
         surfaceHolder.addCallback(new Callback() {
-            @RequiresApi(api = Build.VERSION_CODES.O)
             @Override
             public void surfaceCreated(SurfaceHolder holder) {
                 Log.d("NYDBG", "surfaceCreated position " + position);
-                if (!"".equals(path) && !mediaPlayer.isPlaying()) {
+                if (!"".equals(uri) && !mediaPlayer.isPlaying()) {
                     play(position);
                 }
             }
@@ -102,11 +103,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-
         switch (requestCode) {
             case FILE_SELECT_CODE:
                 if (resultCode == RESULT_OK) {
-                    Uri uri = data.getData();
+                    uri = data.getData();
                     Log.d(TAG, "File Uri: " + uri.toString());
                     path = FileUtils.getPathByUri(getApplicationContext(), uri);
                     Log.d(TAG, "File Path: " + path);
@@ -116,12 +116,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onActivityResult(requestCode, resultCode, data);
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.O)
     private void play(int position) {
         Log.d(TAG, "续播时间：" + position);
         try {
             mediaPlayer.reset();
-            mediaPlayer.setDataSource(path);
+//            mediaPlayer.setDataSource(path);//API<29
+            mediaPlayer.setDataSource(getApplicationContext(), uri);
             mediaPlayer.prepare();
             mediaPlayer.seekTo(position, MediaPlayer.SEEK_CLOSEST);
             mediaPlayer.setDisplay(surfaceHolder);
@@ -131,12 +131,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mediaPlayer.start();
     }
 
-    public void doPrepare(String path) {
+    public void doPrepare(Uri uri) {
         Log.d("NYDBG", "doPrepare");
         try {
             mediaPlayer.reset();
             mediaPlayer.setDisplay(surfaceHolder);
-            mediaPlayer.setDataSource(path);
+            mediaPlayer.setDataSource(mContext,uri);
             mediaPlayer.prepare();
         } catch (Exception e) {
             e.printStackTrace();
@@ -167,7 +167,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             case R.id.play:
                 Log.d("NYDBG", "onClick isPrepared " + isPrepared);
                 if (!isPrepared) {
-                    doPrepare(path);
+                    doPrepare(uri);
                     isPrepared = true;
                     position = 0;
                 } else {
